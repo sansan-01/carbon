@@ -1,7 +1,6 @@
 {
   "alias": "carbon.now.sh",
   "version": 2,
-  "public": false,
   "github": {
     "autoAlias": false
   },
