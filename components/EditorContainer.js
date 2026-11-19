@@ -51,30 +51,20 @@ function EditorContainer(props) {
   }, [themes])
 
   // XXX use context
-  const [snippet, setSnippet] = React.useState(props.snippet || null)
+  const [snippet, updateSnippet] = React.useState(props.snippet || null)
   // TODO update this reducer to only take one action
   const [toasts, setToasts] = React.useReducer(toastsReducer, [])
 
-  const snippetId = snippet && snippet.id
-  React.useEffect(() => {
-    const snippetPath = '/' + (snippetId || '')
-    if (snippetPath === props.router.asPath) {
+  function setSnippet(nextSnippet) {
+    updateSnippet(nextSnippet)
+    const snippetId = nextSnippet && nextSnippet.id
+    if (props.embed || snippetId === (snippet && snippet.id)) {
       return
     }
-    
-    // Reloads only if the snipped.id is different from before. Otherwise returns from above.
-    props.router.push(
-      {
-        pathname: '/[id]',
-        query: { id: snippetId },
-      }, 
-      snippetPath, 
-      { 
-        shallow: true,
-        scroll: false 
-      }
-    )
-  }, [snippetId, props.router])
+
+    const href = snippetId ? { pathname: '/[id]', query: { id: snippetId } } : '/'
+    return props.router.push(href, undefined, { shallow: true, scroll: false }).catch(console.error)
+  }
 
   function onEditorUpdate(state) {
     if (user) {

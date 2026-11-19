@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 
 // Ours
 import ApiContext from './ApiContext';
+import Carbon from './Carbon';
 import Dropdown from './Dropdown';
 import Settings from './Settings';
 import Toolbar from './Toolbar';
@@ -35,8 +36,6 @@ import { getRouteState } from '../lib/routing';
 import { getSettings, unescapeHtml, formatCode, omit } from '../lib/util';
 import domtoimage from '../lib/dom-to-image';
 
-const Carbon = dynamic(() => import('./Carbon'), { ssr: false });
-
 const languageIcon = <LanguageIcon />;
 
 const SnippetToolbar = dynamic(() => import('./SnippetToolbar'), {
@@ -55,8 +54,13 @@ class Editor extends React.Component {
     loading: true,
   };
 
-  async componentDidMount() {
-    const { queryState } = getRouteState(this.props.router);
+  componentDidMount() {
+    let queryState = {};
+    try {
+      ({ queryState } = getRouteState(this.props.router));
+    } catch {
+      // A malformed share URL should still open the editor with local settings.
+    }
 
     const newState = {
       // IDEA: we could create an interface for loading this config, so that it looks identical
@@ -69,8 +73,10 @@ class Editor extends React.Component {
     };
 
     // Makes sure the slash in 'application/X' is decoded
-    if (newState.language) {
+    if (typeof newState.language === 'string') {
       newState.language = unescapeHtml(newState.language);
+    } else if (newState.language != null) {
+      newState.language = DEFAULT_LANGUAGE;
     }
 
     if (newState.fontFamily && !FONTS.find(({ id }) => id === newState.fontFamily)) {
@@ -290,15 +296,15 @@ class Editor extends React.Component {
       });
 
   handleSnippetCreate = () =>
-    this.context.snippet
-      .create(this.state)
-      .then(data => this.props.setSnippet(data))
-      .then(() =>
+    this.context.snippet.create(this.state).then(data => {
+      if (data) {
+        this.props.setSnippet(data);
         this.props.setToasts({
           type: 'SET',
           toasts: [{ children: 'Snippet created', timeout: 3000 }],
-        })
-      );
+        });
+      }
+    });
 
   handleSnippetUpdate = () =>
     this.context.snippet.update(this.props.snippet.id, this.state).then(() =>
